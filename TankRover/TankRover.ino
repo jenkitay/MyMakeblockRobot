@@ -20,14 +20,17 @@
 #include <Wire.h>
 
 // Define constants
-#define UP_ARROW IR_BUTTON_PLUS
-#define DOWN_ARROW IR_BUTTON_MINUS
-#define RIGHT_ARROW IR_BUTTON_NEXT
-#define LEFT_ARROW IR_BUTTON_PREVIOUS
+#define UP_ARROW       IR_BUTTON_PLUS
+#define DOWN_ARROW     IR_BUTTON_MINUS
+#define RIGHT_ARROW    IR_BUTTON_NEXT
+#define LEFT_ARROW     IR_BUTTON_PREVIOUS
+#define IR_BUTTON_MODE IR_BUTTON_TEST
 #define MIN_SPEED 30
 #define SPEED_FACTOR 25
 #define IR_MODE 0
 #define AUTO_MODE 1
+#define BUTTON_SENSITIVITY 100
+#define ULTRASONIC_SENSITIVITY 50
 
 // Define expressions
 #define DELTA(a,b) ((a > b) ? (a - b) : (b - a))
@@ -37,11 +40,11 @@ MeDCMotor LeftMotor(M1);
 MeDCMotor RightMotor(M2);
 
 // Connect Infrared Receiver Module
-MeInfraredReceiver infraredReceiverDecode(PORT_6);
+MeInfraredReceiver IRReceiverDecode(PORT_6);
 
 // Connect Ultrasonic Sensor Module
 //Ultrasonic module can ONLY be connected to port 3, 4, 6, 7, 8 of base shield.
-MeUltrasonicSensor ultraSensor(PORT_3); 
+MeUltrasonicSensor UltraSensor(PORT_3); 
 
 
 uint8_t driveSpeed = 180; // speed is unsigned integer in range 0 to 255 inclusive
@@ -49,19 +52,20 @@ uint8_t mode = IR_MODE;   // initialize control mode
 boolean left, right;
 long modeDebounceTime = 0;
 long ultrasonicDebounceTime = 0;
+int distance = 0;
 
 void setup()
 {
-    infraredReceiverDecode.begin();
+    IRReceiverDecode.begin();
     
-    serial.begin(9600);
+    Serial.begin(9600);
 }
 
 void loop()
 {
-    if(infraredReceiverDecode.available() || infraredReceiverDecode.buttonState()) 
+    if(IRReceiverDecode.available() || IRReceiverDecode.buttonState()) 
     {
-        switch(infraredRecveiverDecode.read()) 
+        switch(IRReceiverDecode.read()) 
         {
             // Direction control
             case UP_ARROW:
@@ -108,20 +112,69 @@ void loop()
                 break;
                 
             // Change mode
-            case IR_BUTTON_TEST:
-                if(DELTA(millis(), modeDebounceTime) > 100)
+            case IR_BUTTON_MODE:
+                if(DELTA(millis(), modeDebounceTime) > BUTTON_SENSITIVITY)
                 {
-                    if(++mode > 1) mode = 0;
+                    if(++mode > AUTO_MODE) mode = IR_MODE;
                     modeDebounceTime = millis();
                 }
                 break;
             default:
+                break;
         }
     }
     else
     {
-        
+        if(mode == IR_MODE) Stop();
+        else if(DELTA(millis(), ultrasonicDebounceTime) > ULTRASONIC_SENSITIVITY)
+        {
+            ultrasonicDebounceTime = millis();
+            AutoRun();
+        }
+    }
         
 }
 
+void SetSpeed(uint8_t s)
+{
+    driveSpeed = s;
+}
+
+void Forward()
+{
+    LeftMotor.run(driveSpeed);
+    RightMotor.run(driveSpeed);
+}
+
+void Reverse()
+{
+    LeftMotor.run(-driveSpeed);
+    RightMotor.run(-driveSpeed);
+}
+
+void RotateRight()
+{
+    LeftMotor.run(driveSpeed);
+    RightMotor.run(-driveSpeed);
+}
+
+void RotateLeft()
+{
+    LeftMotor.run(-driveSpeed);
+    RightMotor.run(driveSpeed);
+}
+
+void Stop()
+{
+    LeftMotor.stop();
+    RightMotor.stop();
+}
+
+void AutoRun()
+{
+    int minRange = 6;
+    int maxRange = 15;
+    distance = UltraSensor.distanceInch();
+    Serial.println(distance);
+}
 
