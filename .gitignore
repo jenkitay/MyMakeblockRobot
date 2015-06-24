@@ -1,0 +1,2 @@
+# rule to ignore all subdirectories and files in ModifiedExamples directory
+ModifiedExamples/**/*
