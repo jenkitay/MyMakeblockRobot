@@ -57,7 +57,6 @@ int distance = 0;
 void setup()
 {
     IRReceiverDecode.begin();
-    
     Serial.begin(9600);
 }
 
@@ -176,5 +175,17 @@ void AutoRun()
     int maxRange = 15;
     distance = UltraSensor.distanceInch();
     Serial.println(distance);
+    if(distance > maxRange) 
+    {
+        Forward();
+    }
+    else if(distance < minRange) 
+    {
+        Reverse();
+    }
+    else
+    {
+        RotateLeft();
+    }
 }
 
